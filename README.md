@@ -1,10 +1,10 @@
-# Tiny Transformer Learns Perfect TicTacToe from Minimax Teacher (No MCTS)
+# Tiny Transformer Learns Perfect TicTacToe from Minimax Teacher
 
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/pytorch-2.0%2B-orange)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Train a tiny Transformer (d_model=64, n_heads=4, n_layers=2, ~101K parameters) to play perfect TicTacToe without MCTS, using exact minimax supervision.**
+**Train a tiny Transformer (d_model=64, n_heads=4, n_layers=2, ~101K parameters) to play perfect TicTacToe using an AlphaZero-inspired loop (self-play + policy/value heads) trained via exact minimax supervision instead of MCTS.**
 
 This repo demonstrates policy–value learning with a small transformer, using a provably optimal teacher, plus instrumentation to measure policy agreement, value accuracy, and game-level performance.
 
@@ -22,7 +22,9 @@ This repo demonstrates policy–value learning with a small transformer, using a
 | **Value MAE**         | 0.118                   |
 | **Value Sign Acc**    | 99.3%                   |
 
-> **Note**: 100% draws vs minimax = perfect play! In TicTacToe, optimal play from both sides always results in a draw.
+> **Note**: In TicTacToe, optimal play from both sides is always a draw; achieving 100% draws vs minimax indicates the policy does not enter losing lines in evaluation.
+>
+> **Evaluation methodology**: Game-level metrics computed over 500 games each with fixed seed=0, alternating sides (model plays as X in even-numbered games, as O in odd-numbered games). Minimax teacher selects uniformly among optimal moves when multiple exist. Teacher metrics evaluated on all 4,520 legal non-terminal states.
 
 ---
 
@@ -63,7 +65,7 @@ TicTacToe is small enough to enable **exhaustive evaluation** (4,520 legal non-t
 
 ### What's Novel?
 
-This project implements an **AlphaZero-style training loop without MCTS**. Instead of Monte Carlo Tree Search for target generation, I use:
+This project implements an **AlphaZero-inspired training loop** with self-play data collection and policy/value heads, but instead of using MCTS for target generation (like AlphaZero), it uses:
 
 1. **Exact minimax teacher** - Cached oracle for provably optimal policy (π*) and value (v*) targets
 2. **Symmetry augmentation** - 8 D4 transforms for 8x data efficiency
@@ -86,7 +88,7 @@ The exact teacher makes evaluation clean: I can measure how closely the learned 
 │  1. Self-Play with Current Policy                               │
 │     ├─ Temperature annealing (1.3 → 0.6)                        │
 │     ├─ Dirichlet exploration noise (α=0.3, ε=0.25)              │
-│     └─ Greedy action selection for training                     │
+│     └─ Stochastic action sampling from policy                   │
 │                                                                  │
 │  2. Teacher Target Computation (Cached Minimax)                 │
 │     ├─ π*: uniform over optimal moves                            │
